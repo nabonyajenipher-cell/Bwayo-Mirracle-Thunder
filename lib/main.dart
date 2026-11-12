@@ -238,6 +238,20 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
               'Reset menus and recovery key combinations differ by model. This app cannot send a universal USB erase command or bypass Google/brand account verification.'
         )),
         actions: [
+          if (isA07) TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openSupportPage('https://www.samsung.com/uk/apps/smart-switch/');
+            },
+            child: const Text('Samsung Smart Switch'),
+          ),
+          if (isA07) TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openSupportPage('https://update.kies.samsung.com/SmartSwitchPC_recovery_guide/firmware/emergencyrecovery/');
+            },
+            child: const Text('Emergency recovery instructions'),
+          ),
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
         ],
       ),
