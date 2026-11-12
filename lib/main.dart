@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_serial/usb_serial.dart';
@@ -167,47 +166,27 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (mounted) setState(() { scanningOtg = false; });
     }
   }
-  Future<void> _openFactoryResetSettings() async {
-    final approved = await showDialog<bool>(
+  Future<void> _checkUsbEraseSupport() async {
+    if (scanningOtg) return;
+    if (otgDevices.isEmpty) {
+      await _scanOtgDevices();
+    }
+    if (!mounted) return;
+    final detected = otgDevices.isNotEmpty;
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Open factory reset settings?'),
-        content: const Text(
-          'Factory reset permanently erases the phone’s local data. Back up important files first, '
-          'make sure the owner has approved, and confirm that you know the Google/Samsung account '
-          'credentials needed after reset. Continue to Android Settings? The app will not erase '
-          'the phone by itself; Android requires the owner to review and confirm the reset.',
+        title: Text(detected ? 'USB device detected' : 'No supported USB device found'),
+        content: Text(
+          detected
+            ? 'A USB-serial accessory is visible, but this does not prove that the connected item is an Android phone or that it accepts factory-reset commands. Android has no universal USB-OTG erase command. A target phone must be deliberately enrolled in an authorized device-management setup that supports wiping; otherwise reset it using its own approved recovery/settings process.'
+            : 'No compatible USB-serial accessory was detected. Even when a phone is visible over USB, ordinary Android apps cannot universally erase another phone. USB debugging authorization, model-specific support and an authorized reset method are required.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Open reset settings')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
         ],
       ),
     );
-    if (approved != true || !mounted) return;
-
-    try {
-      const intent = AndroidIntent(action: 'android.settings.PRIVACY_SETTINGS');
-      await intent.launch();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Android Settings opened. Find Factory data reset and complete the confirmation on the phone.')),
-      );
-    } catch (_) {
-      try {
-        const fallback = AndroidIntent(action: 'android.settings.SETTINGS');
-        await fallback.launch();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings opened. Navigate to General management → Reset → Factory data reset.')),
-        );
-      } catch (error) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open Android Settings: $error')),
-        );
-      }
-    }
   }
 
   Future<void> _resetUsbSession() async {
@@ -285,7 +264,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
     appBar: AppBar(title: const Text('Firmware flashing assistant')),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
-        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant prepares a checklist; it does not connect to a phone or perform the flash.',
+        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant can inspect supported USB-serial accessories and prepare model-specific guidance. It cannot universally erase or flash another Android phone over OTG.',
         style: TextStyle(fontWeight: FontWeight.w600),
       ))),
       const SizedBox(height: 14),
@@ -294,7 +273,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         children: [
           const Row(children: [Icon(Icons.usb, color: Colors.tealAccent, size: 28), SizedBox(width: 8), Expanded(child: Text('USB OTG DEVICE CHECK', style: TextStyle(fontWeight: FontWeight.bold)))]),
           const SizedBox(height: 8),
-          const Text('Connect a compatible USB-serial accessory using a USB OTG adapter. This checks supported USB serial devices; it does not identify every Android phone or perform firmware flashing.'),
+          const Text('Connect the target using a USB OTG adapter, then scan. This checks compatible USB-serial accessories only; it cannot identify every Android phone or erase a connected phone.'),
           const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: scanningOtg ? null : _scanOtgDevices,
@@ -309,9 +288,9 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
-            onPressed: _openFactoryResetSettings,
-            icon: const Icon(Icons.delete_forever),
-            label: const Text('Start device reset'),
+            onPressed: scanningOtg ? null : _checkUsbEraseSupport,
+            icon: const Icon(Icons.security),
+            label: const Text('Check target erase support'),
           ),
           const SizedBox(height: 8),
           Text(otgMessage),
