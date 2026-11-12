@@ -8,6 +8,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  usb_serial: ^0.5.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
