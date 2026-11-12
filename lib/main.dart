@@ -266,7 +266,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (selectedBrand == 'Samsung') ...[
         const SizedBox(height: 10),
         Card(color: Theme.of(context).colorScheme.surfaceContainerHighest, child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
-          Row(children: [Icon(Icons.verified_device, color: Colors.tealAccent), SizedBox(width: 8), Expanded(child: Text('SAMSUNG GALAXY A07 PROFILE', style: TextStyle(fontWeight: FontWeight.bold)))]),
+          Row(children: [Icon(Icons.verified_user, color: Colors.tealAccent), SizedBox(width: 8), Expanded(child: Text('SAMSUNG GALAXY A07 PROFILE', style: TextStyle(fontWeight: FontWeight.bold)))]),
           SizedBox(height: 8),
           Text('Target device: Galaxy A07 • SM-A075F/DS (model family SM-A075F)'),
           Text('Platform: MediaTek Helio G99. Firmware files for the SM-A075M variant are not interchangeable.'),
