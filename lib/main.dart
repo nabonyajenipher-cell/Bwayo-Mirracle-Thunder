@@ -68,7 +68,7 @@ class _HomePageState extends State<HomePage> {
       const SizedBox(height: 16),
       Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Row(children: [Icon(Icons.system_update_alt, color: Colors.tealAccent, size: 30), SizedBox(width: 10), Expanded(child: Text('PHONE FIRMWARE FLASHING', style: TextStyle(fontWeight: FontWeight.bold)))]),
+          const Row(children: [Icon(Icons.system_update_alt, color: Colors.tealAccent, size: 30), SizedBox(width: 10), Expanded(child: Text('MODEL-SPECIFIC FIRMWARE & RECOVERY', style: TextStyle(fontWeight: FontWeight.bold)))]),
           const SizedBox(height: 8),
           const Text('Prepare a phone for model-matched firmware recovery, verify firmware files and follow approved manufacturer procedures. Direct flashing is not available in this app.'),
           const SizedBox(height: 10),
@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
       ),
       const SizedBox(height: 18),
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
-        'USB and hardware note: this version provides manual guidance and checklists only. It does not detect devices, communicate with physical Miracle Box hardware, unlock phones, bypass FRP, change IMEI values, download firmware or flash devices. Use official manufacturer tools and verified firmware.',
+        'USB and hardware note: this app scans compatible USB-serial accessories, checks selected firmware files with SHA-256, and provides model-specific preparation and authorized reset guidance. It does not universally detect phones, directly flash or erase connected phones, unlock devices, bypass FRP or change IMEI values. Use official manufacturer tools and verified firmware.',
       ))),
       const Center(child: Padding(
         padding: EdgeInsets.all(12),
@@ -197,7 +197,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         title: const Text('Authorized factory reset'),
         content: SingleChildScrollView(child: Text(
           isA07
-            ? 'Samsung Galaxy A07 (SM-A075F/DS)\\n\\n'
+            ? 'Samsung Galaxy A07 (SM-A075F/DS)\n\\n'
               'For a phone you own or are explicitly authorized to service:\\n'
               '1. Back up the owner’s data first. A factory reset permanently deletes local user data.\\n'
               '2. On the phone, open Settings → General management → Reset → Factory data reset.\\n'
