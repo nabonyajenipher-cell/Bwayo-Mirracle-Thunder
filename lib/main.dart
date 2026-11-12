@@ -157,7 +157,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         otgDevices = found;
         otgMessage = found.isEmpty
           ? 'No compatible USB-serial devices detected. Check OTG support, cable, power and USB permission. Phones in bootloader mode may not appear through this serial interface.'
-          : 'Found ${found.length} compatible USB-serial device(s).';
+          : 'Found ${found.length} compatible USB-serial device(s). USB session refreshed.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -166,6 +166,20 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (mounted) setState(() { scanningOtg = false; });
     }
   }
+  Future<void> _resetUsbSession() async {
+    if (scanningOtg) return;
+    setState(() {
+      otgDevices = [];
+      scanningOtg = true;
+      otgMessage = 'Refreshing the app USB session…';
+    });
+    // This refreshes this app's USB device list. Android does not expose a
+    // general USB-host power-cycle/reset API to ordinary apps.
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    await _scanOtgDevices();
+  }
+
   final requirements = const [
     'I confirmed the exact model number and hardware variant',
     'Firmware is official, signed and intended for this exact model and region',
@@ -242,6 +256,12 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
             onPressed: scanningOtg ? null : _scanOtgDevices,
             icon: scanningOtg ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search),
             label: Text(scanningOtg ? 'Scanning…' : 'Scan USB OTG'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: scanningOtg ? null : _resetUsbSession,
+            icon: const Icon(Icons.restart_alt),
+            label: const Text('Reset / refresh USB session'),
           ),
           const SizedBox(height: 8),
           Text(otgMessage),
