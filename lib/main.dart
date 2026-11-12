@@ -135,8 +135,8 @@ class FlashAssistantPage extends StatefulWidget {
 }
 
 class _FlashAssistantPageState extends State<FlashAssistantPage> {
-  String? selectedBrand;
-  final model = TextEditingController();
+  String? selectedBrand = 'Samsung';
+  final model = TextEditingController(text: 'SM-A075F/DS');
   final firmware = TextEditingController();
   final region = TextEditingController();
   final expectedChecksum = TextEditingController();
@@ -208,6 +208,150 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (mounted) setState(() => checkingFirmware = false);
     }
   }
+
+  bool get isSamsungA07 => selectedBrand == 'Samsung' && RegExp(r'^SM-A075F(?:/DS)?
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Firmware flashing assistant')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant prepares a checklist; it does not connect to a phone or perform the flash.',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ))),
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.usb, color: Colors.tealAccent, size: 28),
+            SizedBox(width: 8),
+            Expanded(child: Text('USB OTG DEVICE CHECK', style: TextStyle(fontWeight: FontWeight.bold))),
+          ]),
+          const SizedBox(height: 8),
+          const Text('Connect a compatible USB-serial accessory using a USB OTG adapter. This checks supported USB serial devices; it does not identify every Android phone or perform firmware flashing.'),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: scanningOtg ? null : _scanOtgDevices,
+            icon: scanningOtg
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.search),
+            label: Text(scanningOtg ? 'Scanning…' : 'Scan USB OTG'),
+          ),
+          const SizedBox(height: 8),
+          Text(otgMessage),
+          ...otgDevices.map((device) => ListTile(
+            dense: true,
+            leading: const Icon(Icons.usb),
+            title: Text(device.productName ?? device.deviceName ?? 'USB device'),
+            subtitle: Text('Vendor ID: ${device.vid ?? 'unknown'} • Product ID: ${device.pid ?? 'unknown'}'),
+          )),
+        ],
+      ))),
+      const SizedBox(height: 14),
+      DropdownButtonFormField<String>(
+        value: selectedBrand,
+        decoration: const InputDecoration(labelText: 'Phone brand', border: OutlineInputBorder()),
+        items: const [
+          'Samsung', 'Tecno', 'Infinix', 'itel', 'Xiaomi / Redmi / POCO',
+          'Google Pixel', 'Motorola', 'Nokia / HMD', 'OnePlus', 'OPPO',
+          'vivo', 'Huawei', 'Realme', 'Other',
+        ].map((name) => DropdownMenuItem(value: name, child: Text(name))).toList(),
+        onChanged: (value) => setState(() => selectedBrand = value),
+      ),
+      const SizedBox(height: 10),
+      TextField(controller: model, decoration: const InputDecoration(labelText: 'Exact model number / variant', border: OutlineInputBorder())),
+      if (selectedBrand == 'Samsung') ...[
+        const SizedBox(height: 10),
+        Card(color: Theme.of(context).colorScheme.surfaceContainerHighest, child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+          Row(children: [Icon(Icons.verified_device, color: Colors.tealAccent), SizedBox(width: 8), Expanded(child: Text('SAMSUNG GALAXY A07 PROFILE', style: TextStyle(fontWeight: FontWeight.bold)))]),
+          SizedBox(height: 8),
+          Text('Target device: Galaxy A07 • SM-A075F/DS (model family SM-A075F)'),
+          Text('Platform: MediaTek Helio G99. Firmware files for the SM-A075M variant are not interchangeable.'),
+          SizedBox(height: 6),
+          Text('This profile checks the model and firmware family only. It does not unlock the bootloader, write partitions or flash the phone.', style: TextStyle(color: Colors.orangeAccent)),
+        ]))),
+      ],
+      const SizedBox(height: 10),
+      TextField(controller: firmware, decoration: const InputDecoration(labelText: 'Official firmware version / build', border: OutlineInputBorder())),
+      const SizedBox(height: 10),
+      TextField(controller: region, decoration: const InputDecoration(labelText: 'Country / region / CSC', border: OutlineInputBorder())),
+
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('FIRMWARE FILE CHECKER', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _pickFirmware, icon: const Icon(Icons.folder_open), label: const Text('Choose firmware file')),
+          if (selectedFirmware != null) Text('${selectedFirmware!.name} • ${selectedFirmware!.size} bytes'),
+          const SizedBox(height: 8),
+          TextField(controller: expectedChecksum, decoration: const InputDecoration(labelText: 'Official SHA-256 checksum (optional)', border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(onPressed: checkingFirmware ? null : _verifyFirmwareFile, icon: checkingFirmware ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.verified_user), label: const Text('Calculate and compare SHA-256')),
+          const SizedBox(height: 8),
+          SelectableText(firmwareStatus),
+          if (firmwareSha256 != null) SelectableText('SHA-256: $firmwareSha256'),
+          const SizedBox(height: 6),
+          const Text('A matching hash checks file integrity only. It does not prove that firmware is genuine or compatible; obtain the expected hash from the official manufacturer.', style: TextStyle(color: Colors.orangeAccent)),
+        ],
+      ))),
+
+      const SizedBox(height: 14),
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'Brand coverage: Samsung, Tecno, Infinix, itel, Xiaomi/Redmi/POCO, Google Pixel, Motorola, Nokia/HMD, OnePlus, OPPO, vivo, Huawei and Realme are available in the device selector. This is brand selection and preparation guidance, not proof that every model has a supported flashing method. Check the exact model with its manufacturer before proceeding.',
+      ))),
+
+      const SizedBox(height: 18),
+      const Text('BEFORE YOU FLASH', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      ...requirements.map((item) => CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        value: checks[item] ?? false,
+        title: Text(item),
+        onChanged: (value) => setState(() => checks[item] = value ?? false),
+      )),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        onPressed: () {
+          final missing = requirements.where((item) => checks[item] != true).toList();
+          final firmwareCode = firmware.text.trim().toUpperCase();
+          if (isSamsungA07 && !firmwareCode.startsWith('A075F')) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('For SM-A075F/DS, enter an official firmware build beginning A075F. Do not use A075M firmware.')));
+            return;
+          }
+          if (selectedBrand == null || model.text.trim().isEmpty || firmware.text.trim().isEmpty || region.text.trim().isEmpty || missing.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(missing.isNotEmpty ? 'Complete every safety check first.' : 'Select the brand and enter the exact model, firmware and region.'),
+            ));
+            return;
+          }
+          showDialog(context: context, builder: (dialogContext) => AlertDialog(
+            title: const Text('Preparation checklist complete'),
+            content: Text(
+              'Device: ' + (selectedBrand ?? '') + ' ' + model.text.trim() + '\n'
+              'Firmware: ' + firmware.text.trim() + '\n'
+              'Region: ' + region.text.trim() + '\n\n'
+              (isSamsungA07 ? 'Samsung Galaxy A07 SM-A075F profile check passed. Confirm the CSC/region and bootloader revision against the official Samsung package. Use Samsung Smart Switch recovery or an authorized Samsung service centre for recovery; this app has not flashed or modified the phone.' : 'Use only the official manufacturer flashing utility and its instructions for this exact model. This app has not flashed or modified the phone.'),
+            ),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Understood'))],
+          ));
+        },
+        icon: const Icon(Icons.verified_outlined),
+        label: const Text('Check flashing readiness'),
+      ),
+      const SizedBox(height: 14),
+      const Text(
+        'Not supported by this app yet: direct USB flashing, bootloader commands, partition writing, FRP removal, or IMEI changes. Do not use firmware for a similar-looking model.',
+        style: TextStyle(color: Colors.orangeAccent),
+      ),
+    ]),
+  );
+}
+, caseSensitive: false).hasMatch(model.text.trim());
 
   @override
   void dispose() {
