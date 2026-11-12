@@ -25,7 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final owner = TextEditingController();
-  String? selectedBrand;
+  final brand = TextEditingController();
   final model = TextEditingController();
   final fault = TextEditingController();
   final checks = <String, bool>{};
@@ -131,7 +131,7 @@ class FlashAssistantPage extends StatefulWidget {
 }
 
 class _FlashAssistantPageState extends State<FlashAssistantPage> {
-  final brand = TextEditingController();
+  String? selectedBrand;
   final model = TextEditingController();
   final firmware = TextEditingController();
   final region = TextEditingController();
@@ -205,7 +205,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
           showDialog(context: context, builder: (dialogContext) => AlertDialog(
             title: const Text('Preparation checklist complete'),
             content: Text(
-              'Device: ' + brand.text.trim() + ' ' + model.text.trim() + '\n'
+              'Device: ' + (selectedBrand ?? '') + ' ' + model.text.trim() + '\n'
               'Firmware: ' + firmware.text.trim() + '\n'
               'Region: ' + region.text.trim() + '\n\n'
               'Use only the official manufacturer flashing utility and its instructions for this exact model. This app has not flashed or modified the phone.',
