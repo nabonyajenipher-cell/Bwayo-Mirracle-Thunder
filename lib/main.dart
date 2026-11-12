@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_serial/usb_serial.dart';
 
@@ -136,6 +139,11 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
   final model = TextEditingController();
   final firmware = TextEditingController();
   final region = TextEditingController();
+  final expectedChecksum = TextEditingController();
+  PlatformFile? selectedFirmware;
+  String? firmwareSha256;
+  String firmwareStatus = 'No firmware file selected.';
+  bool checkingFirmware = false;
   final checks = <String, bool>{};
   List<UsbDevice> otgDevices = [];
   bool scanningOtg = false;
@@ -167,9 +175,43 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
     'I read the manufacturer’s instructions and understand data may be erased',
   ];
 
+  Future<void> _pickFirmware() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false, withData: false);
+      if (result == null || result.files.isEmpty) return;
+      setState(() { selectedFirmware = result.files.single; firmwareSha256 = null; firmwareStatus = 'Selected. Calculate SHA-256 before relying on this file.'; });
+    } catch (e) {
+      if (mounted) setState(() => firmwareStatus = 'File selection failed: $e');
+    }
+  }
+
+  Future<void> _verifyFirmwareFile() async {
+    final path = selectedFirmware?.path;
+    if (path == null) { setState(() => firmwareStatus = 'Choose a firmware file first.'); return; }
+    setState(() { checkingFirmware = true; firmwareStatus = 'Calculating SHA-256…'; });
+    try {
+      final digest = await sha256.bind(File(path).openRead()).first;
+      if (!mounted) return;
+      final actual = digest.toString();
+      final expected = expectedChecksum.text.trim().toLowerCase();
+      setState(() {
+        firmwareSha256 = actual;
+        firmwareStatus = expected.isEmpty
+          ? 'Hash calculated. Compare it with the checksum published by the manufacturer before flashing.'
+          : (expected == actual
+              ? 'SHA-256 matches the checksum you entered. Confirm the checksum came from the official manufacturer.'
+              : 'CHECKSUM MISMATCH. Do not use this firmware file.');
+      });
+    } catch (e) {
+      if (mounted) setState(() => firmwareStatus = 'Could not read or hash this file: $e');
+    } finally {
+      if (mounted) setState(() => checkingFirmware = false);
+    }
+  }
+
   @override
   void dispose() {
-    model.dispose(); firmware.dispose(); region.dispose();
+    model.dispose(); firmware.dispose(); region.dispose(); expectedChecksum.dispose();
     super.dispose();
   }
 
@@ -227,6 +269,26 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       TextField(controller: firmware, decoration: const InputDecoration(labelText: 'Official firmware version / build', border: OutlineInputBorder())),
       const SizedBox(height: 10),
       TextField(controller: region, decoration: const InputDecoration(labelText: 'Country / region / CSC', border: OutlineInputBorder())),
+
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('FIRMWARE FILE CHECKER', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _pickFirmware, icon: const Icon(Icons.folder_open), label: const Text('Choose firmware file')),
+          if (selectedFirmware != null) Text('${selectedFirmware!.name} • ${selectedFirmware!.size} bytes'),
+          const SizedBox(height: 8),
+          TextField(controller: expectedChecksum, decoration: const InputDecoration(labelText: 'Official SHA-256 checksum (optional)', border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(onPressed: checkingFirmware ? null : _verifyFirmwareFile, icon: checkingFirmware ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.verified_user), label: const Text('Calculate and compare SHA-256')),
+          const SizedBox(height: 8),
+          SelectableText(firmwareStatus),
+          if (firmwareSha256 != null) SelectableText('SHA-256: $firmwareSha256'),
+          const SizedBox(height: 6),
+          const Text('A matching hash checks file integrity only. It does not prove that firmware is genuine or compatible; obtain the expected hash from the official manufacturer.', style: TextStyle(color: Colors.orangeAccent)),
+        ],
+      ))),
 
       const SizedBox(height: 14),
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
