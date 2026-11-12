@@ -184,14 +184,14 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
             : 'No compatible USB-serial accessory was detected. Even when a phone is visible over USB, ordinary Android apps cannot universally erase another phone. USB debugging authorization, model-specific support and an authorized reset method are required.',
         ),
         actions: [
-          if (isA07) TextButton(
+          if (isSamsungA07) TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               _openSupportPage('https://www.samsung.com/uk/apps/smart-switch/');
             },
             child: const Text('Samsung Smart Switch'),
           ),
-          if (isA07) TextButton(
+          if (isSamsungA07) TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               _openSupportPage('https://update.kies.samsung.com/SmartSwitchPC_recovery_guide/firmware/emergencyrecovery/');
