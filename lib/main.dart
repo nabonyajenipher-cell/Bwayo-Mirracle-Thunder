@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_serial/usb_serial.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() => runApp(const BwayoMiracleThunder());
 
@@ -183,10 +184,35 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
             : 'No compatible USB-serial accessory was detected. Even when a phone is visible over USB, ordinary Android apps cannot universally erase another phone. USB debugging authorization, model-specific support and an authorized reset method are required.',
         ),
         actions: [
+          if (isA07) TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openSupportPage('https://www.samsung.com/uk/apps/smart-switch/');
+            },
+            child: const Text('Samsung Smart Switch'),
+          ),
+          if (isA07) TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openSupportPage('https://update.kies.samsung.com/SmartSwitchPC_recovery_guide/firmware/emergencyrecovery/');
+            },
+            child: const Text('Emergency recovery instructions'),
+          ),
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
         ],
       ),
     );
+  }
+
+
+  Future<void> _openSupportPage(String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the support page. Check your internet connection.')),
+      );
+    }
   }
 
   void _showAuthorizedResetGuide() {
@@ -202,7 +228,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
               '1. Back up the owner’s data first. A factory reset permanently deletes local user data.\n'
               '2. On the phone, open Settings → General management → Reset → Factory data reset.\n'
               '3. Review the account and data warnings with the owner, then let the owner confirm the reset on the phone.\n'
-              '4. If Android cannot start, use Samsung’s official Smart Switch emergency software recovery where supported, or an authorized Samsung service centre.\n\n'
+              '4. For software-update recovery, use a Windows PC or Mac with Samsung Smart Switch. In Smart Switch, open More → Emergency Software Recovery and Initialization, then follow the on-screen instructions if the phone is listed. This is Samsung’s computer-based recovery flow, not an OTG function in this app.\n\n'
               'After reset, Android may require a Google or Samsung account previously synced to the phone (Factory Reset Protection). This app cannot bypass that protection.'
             : 'For a phone you own or are explicitly authorized to service:\n'
               '1. Identify the exact brand and model, and back up the owner’s data.\n'
