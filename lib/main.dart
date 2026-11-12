@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:usb_serial/usb_serial.dart';
 
 void main() => runApp(const BwayoMiracleThunder());
 
@@ -136,6 +137,27 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
   final firmware = TextEditingController();
   final region = TextEditingController();
   final checks = <String, bool>{};
+  List<UsbDevice> otgDevices = [];
+  bool scanningOtg = false;
+  String otgMessage = 'Connect a compatible USB-serial device using an OTG adapter, then scan.';
+  Future<void> _scanOtgDevices() async {
+    setState(() { scanningOtg = true; otgMessage = 'Scanning USB host devices…'; });
+    try {
+      final found = await UsbSerial.listDevices();
+      if (!mounted) return;
+      setState(() {
+        otgDevices = found;
+        otgMessage = found.isEmpty
+          ? 'No compatible USB-serial devices detected. Check OTG support, cable, power and USB permission. Phones in bootloader mode may not appear through this serial interface.'
+          : 'Found ${found.length} compatible USB-serial device(s).';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { otgMessage = 'USB scan unavailable: $e'; });
+    } finally {
+      if (mounted) setState(() { scanningOtg = false; });
+    }
+  }
   final requirements = const [
     'I confirmed the exact model number and hardware variant',
     'Firmware is official, signed and intended for this exact model and region',
@@ -158,6 +180,35 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
         'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant prepares a checklist; it does not connect to a phone or perform the flash.',
         style: TextStyle(fontWeight: FontWeight.w600),
+      ))),
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.usb, color: Colors.tealAccent, size: 28),
+            SizedBox(width: 8),
+            Expanded(child: Text('USB OTG DEVICE CHECK', style: TextStyle(fontWeight: FontWeight.bold))),
+          ]),
+          const SizedBox(height: 8),
+          const Text('Connect a compatible USB-serial accessory using a USB OTG adapter. This checks supported USB serial devices; it does not identify every Android phone or perform firmware flashing.'),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: scanningOtg ? null : _scanOtgDevices,
+            icon: scanningOtg
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.search),
+            label: Text(scanningOtg ? 'Scanning…' : 'Scan USB OTG'),
+          ),
+          const SizedBox(height: 8),
+          Text(otgMessage),
+          ...otgDevices.map((device) => ListTile(
+            dense: true,
+            leading: const Icon(Icons.usb),
+            title: Text(device.productName ?? device.deviceName ?? 'USB device'),
+            subtitle: Text('Vendor ID: ${device.vid ?? 'unknown'} • Product ID: ${device.pid ?? 'unknown'}'),
+          )),
+        ],
       ))),
       const SizedBox(height: 14),
       DropdownButtonFormField<String>(
