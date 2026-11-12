@@ -143,6 +143,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
   final expectedChecksum = TextEditingController();
   PlatformFile? selectedFirmware;
   String? firmwareSha256;
+  bool firmwareChecksumMatches = false;
   String firmwareStatus = 'No firmware file selected.';
   bool checkingFirmware = false;
   final checks = <String, bool>{};
@@ -285,7 +286,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false, withData: false);
       if (result == null || result.files.isEmpty) return;
-      setState(() { selectedFirmware = result.files.single; firmwareSha256 = null; firmwareStatus = 'Selected. Calculate SHA-256 before relying on this file.'; });
+      setState(() { selectedFirmware = result.files.single; firmwareSha256 = null; firmwareChecksumMatches = false; firmwareStatus = 'Selected. Enter the official SHA-256 checksum and verify the file before continuing.'; });
     } catch (e) {
       if (mounted) setState(() => firmwareStatus = 'File selection failed: $e');
     }
@@ -294,7 +295,189 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
   Future<void> _verifyFirmwareFile() async {
     final path = selectedFirmware?.path;
     if (path == null) { setState(() => firmwareStatus = 'Choose a firmware file first.'); return; }
-    setState(() { checkingFirmware = true; firmwareStatus = 'Calculating SHA-256…'; });
+    final expected = expectedChecksum.text.trim().toLowerCase();
+    if (!RegExp(r'^[a-f0-9]{64}
+    try {
+      final digest = await sha256.bind(File(path).openRead()).first;
+      if (!mounted) return;
+      final actual = digest.toString();
+      setState(() {
+        firmwareSha256 = actual;
+        firmwareChecksumMatches = expected == actual;
+        firmwareStatus = expected.isEmpty
+          ? 'Hash calculated. Compare it with the checksum published by the manufacturer before flashing.'
+          : (expected == actual
+              ? 'SHA-256 matches the checksum you entered. Confirm the checksum came from the official manufacturer.'
+              : 'CHECKSUM MISMATCH. Do not use this firmware file.');
+      });
+    } catch (e) {
+      if (mounted) setState(() => firmwareStatus = 'Could not read or hash this file: $e');
+    } finally {
+      if (mounted) setState(() => checkingFirmware = false);
+    }
+  }
+
+  bool get isSamsungA07 =>
+      selectedBrand == 'Samsung' &&
+      RegExp(r'^SM-A075F(?:/DS)?$', caseSensitive: false).hasMatch(model.text.trim());
+
+  @override
+  void dispose() {
+    model.dispose();
+    firmware.dispose();
+    region.dispose();
+    expectedChecksum.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Firmware flashing assistant')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant can inspect supported USB-serial accessories and prepare model-specific guidance. It cannot universally erase or flash another Android phone over OTG. Use the authorized reset guide for safe, owner-confirmed reset steps.',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ))),
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.usb, color: Colors.tealAccent, size: 28), SizedBox(width: 8), Expanded(child: Text('USB OTG DEVICE CHECK', style: TextStyle(fontWeight: FontWeight.bold)))]),
+          const SizedBox(height: 8),
+          const Text('Connect the target using a USB OTG adapter, then scan. This checks compatible USB-serial accessories only; it cannot identify every Android phone or erase a connected phone.'),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: scanningOtg ? null : _scanOtgDevices,
+            icon: scanningOtg ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search),
+            label: Text(scanningOtg ? 'Scanning…' : 'Scan USB OTG'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: scanningOtg ? null : _resetUsbSession,
+            icon: const Icon(Icons.restart_alt),
+            label: const Text('Refresh USB device scan'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: scanningOtg ? null : _showAuthorizedResetGuide,
+            icon: const Icon(Icons.security),
+            label: const Text('Open authorized reset guide'),
+          ),
+          const SizedBox(height: 8),
+          Text(otgMessage),
+          ...otgDevices.map((device) => ListTile(
+            dense: true, leading: const Icon(Icons.usb),
+            title: Text(device.productName ?? device.deviceName ?? 'USB device'),
+            subtitle: Text('Vendor ID: ' + (device.vid?.toString() ?? 'unknown') + ' • Product ID: ' + (device.pid?.toString() ?? 'unknown')),
+          )),
+        ],
+      ))),
+      const SizedBox(height: 14),
+      DropdownButtonFormField<String>(
+        value: selectedBrand,
+        decoration: const InputDecoration(labelText: 'Phone brand', border: OutlineInputBorder()),
+        items: const ['Samsung', 'Tecno', 'Infinix', 'itel', 'Xiaomi / Redmi / POCO', 'Google Pixel', 'Motorola', 'Nokia / HMD', 'OnePlus', 'OPPO', 'vivo', 'Huawei', 'Realme', 'Other']
+          .map((name) => DropdownMenuItem(value: name, child: Text(name))).toList(),
+        onChanged: (value) => setState(() => selectedBrand = value),
+      ),
+      const SizedBox(height: 10),
+      TextField(controller: model, decoration: const InputDecoration(labelText: 'Exact model number / variant', border: OutlineInputBorder())),
+      if (selectedBrand == 'Samsung') ...[
+        const SizedBox(height: 10),
+        const Card(child: Padding(padding: EdgeInsets.all(14), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [Icon(Icons.verified_user, color: Colors.tealAccent), SizedBox(width: 8), Expanded(child: Text('SAMSUNG GALAXY A07 PROFILE', style: TextStyle(fontWeight: FontWeight.bold)))]),
+            SizedBox(height: 8),
+            Text('Target device: Galaxy A07 • SM-A075F/DS (model family SM-A075F)'),
+            Text('Firmware for SM-A075M is not interchangeable.'),
+            SizedBox(height: 6),
+            Text('This profile checks the model and firmware family only. It does not unlock the bootloader, write partitions or flash the phone.', style: TextStyle(color: Colors.orangeAccent)),
+          ],
+        ))),
+      ],
+      const SizedBox(height: 10),
+      TextField(controller: firmware, decoration: const InputDecoration(labelText: 'Official firmware version / build', border: OutlineInputBorder())),
+      const SizedBox(height: 10),
+      TextField(controller: region, decoration: const InputDecoration(labelText: 'Country / region / CSC', border: OutlineInputBorder())),
+      const SizedBox(height: 14),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('FIRMWARE FILE CHECKER', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(onPressed: _pickFirmware, icon: const Icon(Icons.folder_open), label: const Text('Choose firmware file')),
+          if (selectedFirmware != null) Text(selectedFirmware!.name + ' • ' + selectedFirmware!.size.toString() + ' bytes'),
+          const SizedBox(height: 8),
+          TextField(controller: expectedChecksum, onChanged: (_) => setState(() { firmwareChecksumMatches = false; }), decoration: const InputDecoration(labelText: 'Official SHA-256 checksum (required for readiness check)', border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(
+            onPressed: checkingFirmware ? null : _verifyFirmwareFile,
+            icon: checkingFirmware ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.verified_user),
+            label: const Text('Calculate and compare SHA-256'),
+          ),
+          const SizedBox(height: 8),
+          SelectableText(firmwareStatus),
+          if (firmwareSha256 != null) SelectableText('SHA-256: ' + firmwareSha256!),
+          const SizedBox(height: 6),
+          const Text('A matching hash checks file integrity only. It does not prove that firmware is genuine or compatible; obtain the expected hash from the official manufacturer.', style: TextStyle(color: Colors.orangeAccent)),
+        ],
+      ))),
+      const SizedBox(height: 14),
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'Brand coverage: Samsung, Tecno, Infinix, itel, Xiaomi/Redmi/POCO, Google Pixel, Motorola, Nokia/HMD, OnePlus, OPPO, vivo, Huawei and Realme. Brand selection is preparation guidance, not proof that every model has a supported flashing method.',
+      ))),
+      const SizedBox(height: 18),
+      const Text('BEFORE YOU FLASH', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      ...requirements.map((item) => CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        value: checks[item] ?? false,
+        title: Text(item),
+        onChanged: (value) => setState(() => checks[item] = value ?? false),
+      )),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        onPressed: () {
+          final missing = requirements.where((item) => checks[item] != true).toList();
+          final firmwareCode = firmware.text.trim().toUpperCase();
+          if (isSamsungA07 && !firmwareCode.startsWith('A075F')) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('For SM-A075F/DS, enter official firmware beginning A075F. Do not use A075M firmware.')));
+            return;
+          }
+          if (selectedFirmware == null || firmwareSha256 == null || !firmwareChecksumMatches) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select the firmware file and verify its SHA-256 against the official manufacturer checksum first.')));
+            return;
+          }
+          if (selectedBrand == null || model.text.trim().isEmpty || firmware.text.trim().isEmpty || region.text.trim().isEmpty || missing.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(missing.isNotEmpty ? 'Complete every safety check first.' : 'Select brand and enter exact model, firmware and region.')));
+            return;
+          }
+          final deviceName = (selectedBrand ?? '') + ' ' + model.text.trim();
+          final message = 'Device: ' + deviceName + '\nFirmware: ' + firmware.text.trim() + '\nRegion: ' + region.text.trim() + '\n\n' +
+            (isSamsungA07
+              ? 'Samsung Galaxy A07 SM-A075F profile check passed. Confirm CSC and bootloader revision against the official Samsung package. Use Samsung Smart Switch recovery or an authorized Samsung service centre. This app has not flashed or modified the phone.'
+              : 'Use only the official manufacturer flashing utility for this exact model. This app has not flashed or modified the phone.');
+          showDialog(context: context, builder: (dialogContext) => AlertDialog(
+            title: const Text('Preparation checklist complete'),
+            content: Text(message),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Understood'))],
+          ));
+        },
+        icon: const Icon(Icons.verified_outlined),
+        label: const Text('Check flashing readiness'),
+      ),
+      const SizedBox(height: 14),
+      const Text('Not supported by this app: direct USB flashing, bootloader commands, partition writing, universal USB erase, FRP removal, or IMEI changes. Do not use firmware for a similar-looking model.', style: TextStyle(color: Colors.orangeAccent)),
+    ]),
+  );
+}
+).hasMatch(expected)) {
+      setState(() { firmwareChecksumMatches = false; firmwareStatus = 'Enter a valid 64-character SHA-256 checksum from the official manufacturer source.'; });
+      return;
+    }
+    setState(() { checkingFirmware = true; firmwareChecksumMatches = false; firmwareStatus = 'Calculating SHA-256…'; });
     try {
       final digest = await sha256.bind(File(path).openRead()).first;
       if (!mounted) return;
