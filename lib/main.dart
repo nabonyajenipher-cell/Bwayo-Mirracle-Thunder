@@ -25,7 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final owner = TextEditingController();
-  final brand = TextEditingController();
+  String? selectedBrand;
   final model = TextEditingController();
   final fault = TextEditingController();
   final checks = <String, bool>{};
@@ -147,7 +147,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
 
   @override
   void dispose() {
-    brand.dispose(); model.dispose(); firmware.dispose(); region.dispose();
+    model.dispose(); firmware.dispose(); region.dispose();
     super.dispose();
   }
 
@@ -160,13 +160,28 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         style: TextStyle(fontWeight: FontWeight.w600),
       ))),
       const SizedBox(height: 14),
-      TextField(controller: brand, decoration: const InputDecoration(labelText: 'Phone brand', border: OutlineInputBorder())),
+      DropdownButtonFormField<String>(
+        value: selectedBrand,
+        decoration: const InputDecoration(labelText: 'Phone brand', border: OutlineInputBorder()),
+        items: const [
+          'Samsung', 'Tecno', 'Infinix', 'itel', 'Xiaomi / Redmi / POCO',
+          'Google Pixel', 'Motorola', 'Nokia / HMD', 'OnePlus', 'OPPO',
+          'vivo', 'Huawei', 'Realme', 'Other',
+        ].map((name) => DropdownMenuItem(value: name, child: Text(name))).toList(),
+        onChanged: (value) => setState(() => selectedBrand = value),
+      ),
       const SizedBox(height: 10),
       TextField(controller: model, decoration: const InputDecoration(labelText: 'Exact model number / variant', border: OutlineInputBorder())),
       const SizedBox(height: 10),
       TextField(controller: firmware, decoration: const InputDecoration(labelText: 'Official firmware version / build', border: OutlineInputBorder())),
       const SizedBox(height: 10),
       TextField(controller: region, decoration: const InputDecoration(labelText: 'Country / region / CSC', border: OutlineInputBorder())),
+
+      const SizedBox(height: 14),
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'Brand coverage: Samsung, Tecno, Infinix, itel, Xiaomi/Redmi/POCO, Google Pixel, Motorola, Nokia/HMD, OnePlus, OPPO, vivo, Huawei and Realme are available in the device selector. This is brand selection and preparation guidance, not proof that every model has a supported flashing method. Check the exact model with its manufacturer before proceeding.',
+      ))),
+
       const SizedBox(height: 18),
       const Text('BEFORE YOU FLASH', style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 6),
@@ -181,9 +196,9 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       FilledButton.icon(
         onPressed: () {
           final missing = requirements.where((item) => checks[item] != true).toList();
-          if (brand.text.trim().isEmpty || model.text.trim().isEmpty || firmware.text.trim().isEmpty || region.text.trim().isEmpty || missing.isNotEmpty) {
+          if (selectedBrand == null || model.text.trim().isEmpty || firmware.text.trim().isEmpty || region.text.trim().isEmpty || missing.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(missing.isNotEmpty ? 'Complete every safety check first.' : 'Enter the brand, exact model, firmware and region.'),
+              content: Text(missing.isNotEmpty ? 'Complete every safety check first.' : 'Select the brand and enter the exact model, firmware and region.'),
             ));
             return;
           }
