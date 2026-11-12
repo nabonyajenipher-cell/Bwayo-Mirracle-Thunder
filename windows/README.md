@@ -1,0 +1,1 @@
+Windows desktop target: run `flutter create --platforms=windows .` from the project root if generated Windows runner files are absent, then `flutter build windows`. Requires Visual Studio with Desktop development with C++ installed.
