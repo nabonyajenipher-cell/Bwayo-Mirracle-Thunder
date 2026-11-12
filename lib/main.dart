@@ -166,6 +166,40 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (mounted) setState(() { scanningOtg = false; });
     }
   }
+  Future<void> _showFactoryResetGuide() async {
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Factory reset warning'),
+        content: const Text(
+          'A factory reset permanently deletes user data on the selected phone. '
+          'Only continue if you own the phone or have the owner’s explicit permission, '
+          'and the owner has backed up important files and knows their Google/Samsung account details. '
+          'This app cannot send a universal erase command over its current USB-serial connection.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('I have permission')),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Erase using the phone itself'),
+        content: const SingleChildScrollView(child: Text(
+          'On the phone, open Settings → General management → Reset → Factory data reset → Reset → Delete all. '
+          'Menu names may differ by Android version and brand. Keep the phone charged. '
+          'The owner must complete the final confirmation on the phone. '
+          'For a locked or unresponsive phone, use the manufacturer’s official recovery instructions or an authorized service centre. '
+          'This app has not erased or changed the connected device.',
+        )),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+      ),
+    );
+  }
+
   Future<void> _resetUsbSession() async {
     if (scanningOtg) return;
     setState(() {
@@ -262,6 +296,12 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
             onPressed: scanningOtg ? null : _resetUsbSession,
             icon: const Icon(Icons.restart_alt),
             label: const Text('Reset / refresh USB session'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _showFactoryResetGuide,
+            icon: const Icon(Icons.delete_forever_outlined),
+            label: const Text('Factory reset / erase data guide'),
           ),
           const SizedBox(height: 8),
           Text(otgMessage),
