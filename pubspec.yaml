@@ -11,6 +11,7 @@ dependencies:
   usb_serial: ^0.5.2
   file_picker: ^10.3.3
   crypto: ^3.0.6
+  url_launcher: ^6.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
