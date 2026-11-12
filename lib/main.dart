@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:usb_serial/usb_serial.dart';
@@ -166,38 +167,47 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
       if (mounted) setState(() { scanningOtg = false; });
     }
   }
-  Future<void> _showFactoryResetGuide() async {
+  Future<void> _openFactoryResetSettings() async {
     final approved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Factory reset warning'),
+        title: const Text('Open factory reset settings?'),
         content: const Text(
-          'A factory reset permanently deletes user data on the selected phone. '
-          'Only continue if you own the phone or have the owner’s explicit permission, '
-          'and the owner has backed up important files and knows their Google/Samsung account details. '
-          'This app cannot send a universal erase command over its current USB-serial connection.',
+          'Factory reset permanently erases the phone’s local data. Back up important files first, '
+          'make sure the owner has approved, and confirm that you know the Google/Samsung account '
+          'credentials needed after reset. Continue to Android Settings? The app will not erase '
+          'the phone by itself; Android requires the owner to review and confirm the reset.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('I have permission')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Open reset settings')),
         ],
       ),
     );
     if (approved != true || !mounted) return;
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Erase using the phone itself'),
-        content: const SingleChildScrollView(child: Text(
-          'On the phone, open Settings → General management → Reset → Factory data reset → Reset → Delete all. '
-          'Menu names may differ by Android version and brand. Keep the phone charged. '
-          'The owner must complete the final confirmation on the phone. '
-          'For a locked or unresponsive phone, use the manufacturer’s official recovery instructions or an authorized service centre. '
-          'This app has not erased or changed the connected device.',
-        )),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
-      ),
-    );
+
+    try {
+      const intent = AndroidIntent(action: 'android.settings.PRIVACY_SETTINGS');
+      await intent.launch();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Android Settings opened. Find Factory data reset and complete the confirmation on the phone.')),
+      );
+    } catch (_) {
+      try {
+        const fallback = AndroidIntent(action: 'android.settings.SETTINGS');
+        await fallback.launch();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings opened. Navigate to General management → Reset → Factory data reset.')),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open Android Settings: $error')),
+        );
+      }
+    }
   }
 
   Future<void> _resetUsbSession() async {
@@ -298,10 +308,10 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
             label: const Text('Reset / refresh USB session'),
           ),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: _showFactoryResetGuide,
-            icon: const Icon(Icons.delete_forever_outlined),
-            label: const Text('Factory reset / erase data guide'),
+          FilledButton.icon(
+            onPressed: _openFactoryResetSettings,
+            icon: const Icon(Icons.delete_forever),
+            label: const Text('Start device reset'),
           ),
           const SizedBox(height: 8),
           Text(otgMessage),
