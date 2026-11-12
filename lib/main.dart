@@ -70,7 +70,7 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Row(children: [Icon(Icons.system_update_alt, color: Colors.tealAccent, size: 30), SizedBox(width: 10), Expanded(child: Text('PHONE FIRMWARE FLASHING', style: TextStyle(fontWeight: FontWeight.bold)))]),
           const SizedBox(height: 8),
-          const Text('Prepare a phone for a safe, model-matched firmware reinstall using official manufacturer software.'),
+          const Text('Prepare a phone for model-matched firmware recovery, verify firmware files and follow approved manufacturer procedures. Direct flashing is not available in this app.'),
           const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashAssistantPage())),
@@ -189,6 +189,35 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
     );
   }
 
+  void _showAuthorizedResetGuide() {
+    final isA07 = isSamsungA07;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Authorized factory reset'),
+        content: SingleChildScrollView(child: Text(
+          isA07
+            ? 'Samsung Galaxy A07 (SM-A075F/DS)\\n\\n'
+              'For a phone you own or are explicitly authorized to service:\\n'
+              '1. Back up the owner’s data first. A factory reset permanently deletes local user data.\\n'
+              '2. On the phone, open Settings → General management → Reset → Factory data reset.\\n'
+              '3. Review the account and data warnings with the owner, then let the owner confirm the reset on the phone.\\n'
+              '4. If Android cannot start, use Samsung’s official Smart Switch emergency software recovery where supported, or an authorized Samsung service centre.\\n\\n'
+              'After reset, Android may require a Google or Samsung account previously synced to the phone (Factory Reset Protection). This app cannot bypass that protection.'
+            : 'For a phone you own or are explicitly authorized to service:\\n'
+              '1. Identify the exact brand and model, and back up the owner’s data.\\n'
+              '2. Use the manufacturer’s official Settings reset flow or its documented recovery procedure for that exact model.\\n'
+              '3. The owner must review the warnings and confirm the reset on the target phone.\\n'
+              '4. If the phone cannot boot, contact the manufacturer or an authorized service centre.\\n\\n'
+              'Reset menus and recovery key combinations differ by model. This app cannot send a universal USB erase command or bypass Google/brand account verification.'
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   Future<void> _resetUsbSession() async {
     if (scanningOtg) return;
     setState(() {
@@ -264,7 +293,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
     appBar: AppBar(title: const Text('Firmware flashing assistant')),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
-        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant can inspect supported USB-serial accessories and prepare model-specific guidance. It cannot universally erase or flash another Android phone over OTG.',
+        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant can inspect supported USB-serial accessories and prepare model-specific guidance. It cannot universally erase or flash another Android phone over OTG. Use the authorized reset guide for safe, owner-confirmed reset steps.',
         style: TextStyle(fontWeight: FontWeight.w600),
       ))),
       const SizedBox(height: 14),
@@ -284,13 +313,13 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
           OutlinedButton.icon(
             onPressed: scanningOtg ? null : _resetUsbSession,
             icon: const Icon(Icons.restart_alt),
-            label: const Text('Reset / refresh USB session'),
+            label: const Text('Refresh USB device scan'),
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
-            onPressed: scanningOtg ? null : _checkUsbEraseSupport,
+            onPressed: scanningOtg ? null : _showAuthorizedResetGuide,
             icon: const Icon(Icons.security),
-            label: const Text('Check target erase support'),
+            label: const Text('Open authorized reset guide'),
           ),
           const SizedBox(height: 8),
           Text(otgMessage),
@@ -394,7 +423,7 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         label: const Text('Check flashing readiness'),
       ),
       const SizedBox(height: 14),
-      const Text('Not supported by this app yet: direct USB flashing, bootloader commands, partition writing, FRP removal, or IMEI changes. Do not use firmware for a similar-looking model.', style: TextStyle(color: Colors.orangeAccent)),
+      const Text('Not supported by this app: direct USB flashing, bootloader commands, partition writing, universal USB erase, FRP removal, or IMEI changes. Do not use firmware for a similar-looking model.', style: TextStyle(color: Colors.orangeAccent)),
     ]),
   );
 }
