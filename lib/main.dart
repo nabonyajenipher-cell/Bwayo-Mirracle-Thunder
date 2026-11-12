@@ -197,18 +197,18 @@ class _FlashAssistantPageState extends State<FlashAssistantPage> {
         title: const Text('Authorized factory reset'),
         content: SingleChildScrollView(child: Text(
           isA07
-            ? 'Samsung Galaxy A07 (SM-A075F/DS)\n\\n'
-              'For a phone you own or are explicitly authorized to service:\\n'
-              '1. Back up the owner’s data first. A factory reset permanently deletes local user data.\\n'
-              '2. On the phone, open Settings → General management → Reset → Factory data reset.\\n'
-              '3. Review the account and data warnings with the owner, then let the owner confirm the reset on the phone.\\n'
-              '4. If Android cannot start, use Samsung’s official Smart Switch emergency software recovery where supported, or an authorized Samsung service centre.\\n\\n'
+            ? 'Samsung Galaxy A07 (SM-A075F/DS)\n\n'
+              'For a phone you own or are explicitly authorized to service:\n'
+              '1. Back up the owner’s data first. A factory reset permanently deletes local user data.\n'
+              '2. On the phone, open Settings → General management → Reset → Factory data reset.\n'
+              '3. Review the account and data warnings with the owner, then let the owner confirm the reset on the phone.\n'
+              '4. If Android cannot start, use Samsung’s official Smart Switch emergency software recovery where supported, or an authorized Samsung service centre.\n\n'
               'After reset, Android may require a Google or Samsung account previously synced to the phone (Factory Reset Protection). This app cannot bypass that protection.'
-            : 'For a phone you own or are explicitly authorized to service:\\n'
-              '1. Identify the exact brand and model, and back up the owner’s data.\\n'
-              '2. Use the manufacturer’s official Settings reset flow or its documented recovery procedure for that exact model.\\n'
-              '3. The owner must review the warnings and confirm the reset on the target phone.\\n'
-              '4. If the phone cannot boot, contact the manufacturer or an authorized service centre.\\n\\n'
+            : 'For a phone you own or are explicitly authorized to service:\n'
+              '1. Identify the exact brand and model, and back up the owner’s data.\n'
+              '2. Use the manufacturer’s official Settings reset flow or its documented recovery procedure for that exact model.\n'
+              '3. The owner must review the warnings and confirm the reset on the target phone.\n'
+              '4. If the phone cannot boot, contact the manufacturer or an authorized service centre.\n\n'
               'Reset menus and recovery key combinations differ by model. This app cannot send a universal USB erase command or bypass Google/brand account verification.'
         )),
         actions: [
