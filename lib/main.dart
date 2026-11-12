@@ -60,6 +60,21 @@ class _HomePageState extends State<HomePage> {
           Text('Phone servicing workspace for device records, manual diagnostics, backup checks and firmware preparation.'),
         ],
       ))),
+
+      const SizedBox(height: 16),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Row(children: [Icon(Icons.system_update_alt, color: Colors.tealAccent, size: 30), SizedBox(width: 10), Expanded(child: Text('PHONE FIRMWARE FLASHING', style: TextStyle(fontWeight: FontWeight.bold)))]),
+          const SizedBox(height: 8),
+          const Text('Prepare a phone for a safe, model-matched firmware reinstall using official manufacturer software.'),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashAssistantPage())),
+            icon: const Icon(Icons.build_circle_outlined), label: const Text('Open flashing assistant'),
+          ),
+        ],
+      ))),
+
       const SizedBox(height: 12),
       const Text('DEVICE INFORMATION', style: TextStyle(fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
@@ -106,5 +121,91 @@ class _HomePageState extends State<HomePage> {
   Widget _field(String label, TextEditingController controller) => Padding(
     padding: const EdgeInsets.only(bottom: 9),
     child: TextField(controller: controller, decoration: InputDecoration(labelText: label, border: const OutlineInputBorder())),
+  );
+}
+
+class FlashAssistantPage extends StatefulWidget {
+  const FlashAssistantPage({super.key});
+  @override
+  State<FlashAssistantPage> createState() => _FlashAssistantPageState();
+}
+
+class _FlashAssistantPageState extends State<FlashAssistantPage> {
+  final brand = TextEditingController();
+  final model = TextEditingController();
+  final firmware = TextEditingController();
+  final region = TextEditingController();
+  final checks = <String, bool>{};
+  final requirements = const [
+    'I confirmed the exact model number and hardware variant',
+    'Firmware is official, signed and intended for this exact model and region',
+    'I backed up important data and obtained the owner’s permission',
+    'Battery is sufficiently charged (preferably above 60%)',
+    'I have a reliable USB cable and the correct manufacturer USB drivers',
+    'I read the manufacturer’s instructions and understand data may be erased',
+  ];
+
+  @override
+  void dispose() {
+    brand.dispose(); model.dispose(); firmware.dispose(); region.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Firmware flashing assistant')),
+    body: ListView(padding: const EdgeInsets.all(16), children: [
+      const Card(child: Padding(padding: EdgeInsets.all(14), child: Text(
+        'SAFETY FIRST: Flashing incorrect firmware can permanently damage a phone or erase its data. This assistant prepares a checklist; it does not connect to a phone or perform the flash.',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ))),
+      const SizedBox(height: 14),
+      TextField(controller: brand, decoration: const InputDecoration(labelText: 'Phone brand', border: OutlineInputBorder())),
+      const SizedBox(height: 10),
+      TextField(controller: model, decoration: const InputDecoration(labelText: 'Exact model number / variant', border: OutlineInputBorder())),
+      const SizedBox(height: 10),
+      TextField(controller: firmware, decoration: const InputDecoration(labelText: 'Official firmware version / build', border: OutlineInputBorder())),
+      const SizedBox(height: 10),
+      TextField(controller: region, decoration: const InputDecoration(labelText: 'Country / region / CSC', border: OutlineInputBorder())),
+      const SizedBox(height: 18),
+      const Text('BEFORE YOU FLASH', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 6),
+      ...requirements.map((item) => CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        controlAffinity: ListTileControlAffinity.leading,
+        value: checks[item] ?? false,
+        title: Text(item),
+        onChanged: (value) => setState(() => checks[item] = value ?? false),
+      )),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        onPressed: () {
+          final missing = requirements.where((item) => checks[item] != true).toList();
+          if (brand.text.trim().isEmpty || model.text.trim().isEmpty || firmware.text.trim().isEmpty || region.text.trim().isEmpty || missing.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(missing.isNotEmpty ? 'Complete every safety check first.' : 'Enter the brand, exact model, firmware and region.'),
+            ));
+            return;
+          }
+          showDialog(context: context, builder: (dialogContext) => AlertDialog(
+            title: const Text('Preparation checklist complete'),
+            content: Text(
+              'Device: ' + brand.text.trim() + ' ' + model.text.trim() + '\n'
+              'Firmware: ' + firmware.text.trim() + '\n'
+              'Region: ' + region.text.trim() + '\n\n'
+              'Use only the official manufacturer flashing utility and its instructions for this exact model. This app has not flashed or modified the phone.',
+            ),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Understood'))],
+          ));
+        },
+        icon: const Icon(Icons.verified_outlined),
+        label: const Text('Check flashing readiness'),
+      ),
+      const SizedBox(height: 14),
+      const Text(
+        'Not supported by this app yet: direct USB flashing, bootloader commands, partition writing, FRP removal, or IMEI changes. Do not use firmware for a similar-looking model.',
+        style: TextStyle(color: Colors.orangeAccent),
+      ),
+    ]),
   );
 }
