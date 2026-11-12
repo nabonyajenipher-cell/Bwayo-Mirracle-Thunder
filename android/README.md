@@ -1,0 +1,1 @@
+Android target: run `flutter create --platforms=android .` from the project root if generated Android Gradle files are absent, then `flutter build apk --release`. Requires Android SDK and accepted licenses.
